@@ -52903,6 +52903,9 @@ function resolveVersionInput() {
         core.warning('Both go-version and go-version-file inputs are specified, only go-version will be used');
     }
     if (version) {
+        if (version.startsWith('go')) {
+            version = installer.makeSemver(version);
+        }
         return version;
     }
     if (versionFilePath) {

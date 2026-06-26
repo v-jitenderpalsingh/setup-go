@@ -158,6 +158,9 @@ function resolveVersionInput(): string {
   }
 
   if (version) {
+    if (version.startsWith('go')) {
+      version = installer.makeSemver(version);
+    }
     return version;
   }
 
