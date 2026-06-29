@@ -618,6 +618,13 @@ export async function getVersionsDist(
   return (await http.getJson<IGoVersion[]>(dlUrl)).result;
 }
 
+// Upstream Go version grammar: go1, go1.21, go1.21.5, go1.21beta1, go1.21rc2
+// See https://pkg.go.dev/go/version
+export function isGoNativeVersion(version: string): boolean {
+  const expression = /^go\d+(\.\d+){0,2}(beta\d+|rc\d+)?$/;
+  return expression.test(version);
+}
+
 //
 // Convert the go version syntax into semver for semver matching
 // 1.13.1 => 1.13.1

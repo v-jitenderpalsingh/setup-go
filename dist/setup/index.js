@@ -52211,6 +52211,7 @@ exports.getInfoFromManifest = getInfoFromManifest;
 exports.getInfoFromDirectDownload = getInfoFromDirectDownload;
 exports.findMatch = findMatch;
 exports.getVersionsDist = getVersionsDist;
+exports.isGoNativeVersion = isGoNativeVersion;
 exports.makeSemver = makeSemver;
 exports.parseGoVersionFile = parseGoVersionFile;
 exports.resolveStableVersionInput = resolveStableVersionInput;
@@ -52638,6 +52639,12 @@ function getVersionsDist(dlUrl) {
         return (yield http.getJson(dlUrl)).result;
     });
 }
+// Upstream Go version grammar: go1, go1.21, go1.21.5, go1.21beta1, go1.21rc2
+// See https://pkg.go.dev/go/version
+function isGoNativeVersion(version) {
+    const expression = /^go\d+(\.\d+){0,2}(beta\d+|rc\d+)?$/;
+    return expression.test(version);
+}
 //
 // Convert the go version syntax into semver for semver matching
 // 1.13.1 => 1.13.1
@@ -52904,6 +52911,9 @@ function resolveVersionInput() {
     }
     if (version) {
         if (version.startsWith('go')) {
+            if (!installer.isGoNativeVersion(version)) {
+                throw new Error(`Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.21beta1, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`);
+            }
             version = installer.makeSemver(version);
         }
         return version;
@@ -52913,6 +52923,12 @@ function resolveVersionInput() {
             throw new Error(`The specified go version file at: ${versionFilePath} does not exist`);
         }
         version = installer.parseGoVersionFile(versionFilePath);
+        if (version.startsWith('go')) {
+            if (!installer.isGoNativeVersion(version)) {
+                throw new Error(`Invalid Go version "${version}" in ${versionFilePath}. Go-native versions must look like go1.21, go1.21.5, go1.21beta1, or go1.21rc2.`);
+            }
+            version = installer.makeSemver(version);
+        }
     }
     return version;
 }
