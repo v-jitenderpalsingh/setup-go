@@ -723,6 +723,32 @@ describe('setup-go', () => {
     );
   });
 
+  it('accepts a Go-native go-version input with beta suffix and normalizes it', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+    inputs['go-version'] = 'go1.21beta1';
+    findSpy.mockImplementation(() =>
+      path.normalize('/cache/go/1.21.0-beta.1/x64')
+    );
+
+    await main.run();
+
+    expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0-beta.1');
+  });
+
+  it('accepts a Go-native go-version input with rc suffix and normalizes it', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+    inputs['go-version'] = 'go1.21rc2';
+    findSpy.mockImplementation(() =>
+      path.normalize('/cache/go/1.21.0-rc.2/x64')
+    );
+
+    await main.run();
+
+    expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0-rc.2');
+  });
+
   describe('check-latest flag', () => {
     it("use local version and don't check manifest if check-latest is not specified", async () => {
       os.platform = 'linux';
