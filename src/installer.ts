@@ -618,7 +618,7 @@ export async function getVersionsDist(
   return (await http.getJson<IGoVersion[]>(dlUrl)).result;
 }
 
-// Upstream Go version grammar: go1, go1.21, go1.21.5, go1.21beta1, go1.21rc2
+// Upstream Go version grammar: go1.21, go1.21.5, go1.21beta1, go1.21rc2
 // See https://pkg.go.dev/go/version
 export function isGoNativeVersion(version: string): boolean {
   const expression =

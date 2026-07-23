@@ -52648,7 +52648,7 @@ function getVersionsDist(dlUrl) {
         return (yield http.getJson(dlUrl)).result;
     });
 }
-// Upstream Go version grammar: go1, go1.21, go1.21.5, go1.21beta1, go1.21rc2
+// Upstream Go version grammar: go1.21, go1.21.5, go1.21beta1, go1.21rc2
 // See https://pkg.go.dev/go/version
 function isGoNativeVersion(version) {
     const expression = /^go[1-9]\d*(\.(0|[1-9]\d*)){1,2}(beta[1-9]\d*|rc[1-9]\d*)?$/;
