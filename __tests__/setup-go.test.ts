@@ -698,6 +698,7 @@ describe('setup-go', () => {
     expect(im.isGoNativeVersion('go1.21.x')).toBe(false);
     expect(im.isGoNativeVersion('go^1.21')).toBe(false);
     expect(im.isGoNativeVersion('1.21')).toBe(false);
+    expect(im.isGoNativeVersion('go1')).toBe(false);
   });
 
   it('accepts a Go-native go-version input and normalizes it', async () => {

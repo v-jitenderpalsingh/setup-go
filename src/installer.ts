@@ -622,7 +622,7 @@ export async function getVersionsDist(
 // See https://pkg.go.dev/go/version
 export function isGoNativeVersion(version: string): boolean {
   const expression =
-    /^go[1-9]\d*(\.(0|[1-9]\d*)){0,2}(beta[1-9]\d*|rc[1-9]\d*)?$/;
+    /^go[1-9]\d*(\.(0|[1-9]\d*)){1,2}(beta[1-9]\d*|rc[1-9]\d*)?$/;
   return expression.test(version);
 }
 
