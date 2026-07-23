@@ -17867,9 +17867,12 @@ function parseCommaParts(str) {
   return parts;
 }
 
-function expandTop(str) {
+function expandTop(str, options) {
   if (!str)
     return [];
+
+  options = options || {};
+  var max = options.max == null ? Infinity : options.max;
 
   // I don't know why Bash 4.3 does this, but it does.
   // Anything starting with {} will have the first two bytes preserved
@@ -17881,7 +17884,7 @@ function expandTop(str) {
     str = '\\{\\}' + str.substr(2);
   }
 
-  return expand(escapeBraces(str), true).map(unescapeBraces);
+  return expand(escapeBraces(str), max, true).map(unescapeBraces);
 }
 
 function identity(e) {
@@ -17902,106 +17905,112 @@ function gte(i, y) {
   return i >= y;
 }
 
-function expand(str, isTop) {
+function expand(str, max, isTop) {
   var expansions = [];
 
-  var m = balanced('{', '}', str);
-  if (!m || /\$$/.test(m.pre)) return [str];
+  // The `{a},b}` rewrite below restarts expansion on a rewritten string with
+  // the same `max` and `isTop = true`. Loop instead of recursing so a long run
+  // of non-expanding `{}` groups can't exhaust the call stack.
+  for (;;) {
+    var m = balanced('{', '}', str);
+    if (!m || /\$$/.test(m.pre)) return [str];
 
-  var isNumericSequence = /^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$/.test(m.body);
-  var isAlphaSequence = /^[a-zA-Z]\.\.[a-zA-Z](?:\.\.-?\d+)?$/.test(m.body);
-  var isSequence = isNumericSequence || isAlphaSequence;
-  var isOptions = m.body.indexOf(',') >= 0;
-  if (!isSequence && !isOptions) {
-    // {a},b}
-    if (m.post.match(/,(?!,).*\}/)) {
-      str = m.pre + '{' + m.body + escClose + m.post;
-      return expand(str);
-    }
-    return [str];
-  }
-
-  var n;
-  if (isSequence) {
-    n = m.body.split(/\.\./);
-  } else {
-    n = parseCommaParts(m.body);
-    if (n.length === 1) {
-      // x{{a,b}}y ==> x{a}y x{b}y
-      n = expand(n[0], false).map(embrace);
-      if (n.length === 1) {
-        var post = m.post.length
-          ? expand(m.post, false)
-          : [''];
-        return post.map(function(p) {
-          return m.pre + n[0] + p;
-        });
+    var isNumericSequence = /^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$/.test(m.body);
+    var isAlphaSequence = /^[a-zA-Z]\.\.[a-zA-Z](?:\.\.-?\d+)?$/.test(m.body);
+    var isSequence = isNumericSequence || isAlphaSequence;
+    var isOptions = m.body.indexOf(',') >= 0;
+    if (!isSequence && !isOptions) {
+      // {a},b}
+      if (m.post.match(/,(?!,).*\}/)) {
+        str = m.pre + '{' + m.body + escClose + m.post;
+        isTop = true
+        continue
       }
+      return [str];
     }
-  }
 
-  // at this point, n is the parts, and we know it's not a comma set
-  // with a single entry.
-
-  // no need to expand pre, since it is guaranteed to be free of brace-sets
-  var pre = m.pre;
-  var post = m.post.length
-    ? expand(m.post, false)
-    : [''];
-
-  var N;
-
-  if (isSequence) {
-    var x = numeric(n[0]);
-    var y = numeric(n[1]);
-    var width = Math.max(n[0].length, n[1].length)
-    var incr = n.length == 3
-      ? Math.max(Math.abs(numeric(n[2])), 1)
-      : 1;
-    var test = lte;
-    var reverse = y < x;
-    if (reverse) {
-      incr *= -1;
-      test = gte;
-    }
-    var pad = n.some(isPadded);
-
-    N = [];
-
-    for (var i = x; test(i, y); i += incr) {
-      var c;
-      if (isAlphaSequence) {
-        c = String.fromCharCode(i);
-        if (c === '\\')
-          c = '';
-      } else {
-        c = String(i);
-        if (pad) {
-          var need = width - c.length;
-          if (need > 0) {
-            var z = new Array(need + 1).join('0');
-            if (i < 0)
-              c = '-' + z + c.slice(1);
-            else
-              c = z + c;
-          }
+    var n;
+    if (isSequence) {
+      n = m.body.split(/\.\./);
+    } else {
+      n = parseCommaParts(m.body);
+      if (n.length === 1) {
+        // x{{a,b}}y ==> x{a}y x{b}y
+        n = expand(n[0], max, false).map(embrace);
+        if (n.length === 1) {
+          var post = m.post.length
+            ? expand(m.post, max, false)
+            : [''];
+          return post.map(function(p) {
+            return m.pre + n[0] + p;
+          });
         }
       }
-      N.push(c);
     }
-  } else {
-    N = concatMap(n, function(el) { return expand(el, false) });
-  }
 
-  for (var j = 0; j < N.length; j++) {
-    for (var k = 0; k < post.length; k++) {
-      var expansion = pre + N[j] + post[k];
-      if (!isTop || isSequence || expansion)
-        expansions.push(expansion);
+    // at this point, n is the parts, and we know it's not a comma set
+    // with a single entry.
+
+    // no need to expand pre, since it is guaranteed to be free of brace-sets
+    var pre = m.pre;
+    var post = m.post.length
+      ? expand(m.post, max, false)
+      : [''];
+
+    var N;
+
+    if (isSequence) {
+      var x = numeric(n[0]);
+      var y = numeric(n[1]);
+      var width = Math.max(n[0].length, n[1].length)
+      var incr = n.length == 3
+        ? Math.max(Math.abs(numeric(n[2])), 1)
+        : 1;
+      var test = lte;
+      var reverse = y < x;
+      if (reverse) {
+        incr *= -1;
+        test = gte;
+      }
+      var pad = n.some(isPadded);
+
+      N = [];
+
+      for (var i = x; test(i, y) && N.length < max; i += incr) {
+        var c;
+        if (isAlphaSequence) {
+          c = String.fromCharCode(i);
+          if (c === '\\')
+            c = '';
+        } else {
+          c = String(i);
+          if (pad) {
+            var need = width - c.length;
+            if (need > 0) {
+              var z = new Array(need + 1).join('0');
+              if (i < 0)
+                c = '-' + z + c.slice(1);
+              else
+                c = z + c;
+            }
+          }
+        }
+        N.push(c);
+      }
+    } else {
+      N = concatMap(n, function(el) { return expand(el, max, false) });
     }
-  }
 
-  return expansions;
+    for (var j = 0; j < N.length; j++) {
+      for (var k = 0; k < post.length && expansions.length < max; k++) {
+        var expansion = pre + N[j] + post[k];
+        if (!isTop || isSequence || expansion)
+          expansions.push(expansion);
+      }
+    }
+
+    return expansions;
+  }
 }
 
 
@@ -52211,6 +52220,7 @@ exports.getInfoFromManifest = getInfoFromManifest;
 exports.getInfoFromDirectDownload = getInfoFromDirectDownload;
 exports.findMatch = findMatch;
 exports.getVersionsDist = getVersionsDist;
+exports.isGoNativeVersion = isGoNativeVersion;
 exports.makeSemver = makeSemver;
 exports.parseGoVersionFile = parseGoVersionFile;
 exports.resolveStableVersionInput = resolveStableVersionInput;
@@ -52638,6 +52648,12 @@ function getVersionsDist(dlUrl) {
         return (yield http.getJson(dlUrl)).result;
     });
 }
+// Upstream Go version grammar: go1.21, go1.21.5, go1.21beta1, go1.21rc2
+// See https://pkg.go.dev/go/version
+function isGoNativeVersion(version) {
+    const expression = /^go[1-9]\d*(\.(0|[1-9]\d*)){1,2}(beta[1-9]\d*|rc[1-9]\d*)?$/;
+    return expression.test(version);
+}
 //
 // Convert the go version syntax into semver for semver matching
 // 1.13.1 => 1.13.1
@@ -52903,6 +52919,12 @@ function resolveVersionInput() {
         core.warning('Both go-version and go-version-file inputs are specified, only go-version will be used');
     }
     if (version) {
+        if (version.startsWith('go')) {
+            if (!installer.isGoNativeVersion(version)) {
+                throw new Error(`Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.21beta1, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`);
+            }
+            version = installer.makeSemver(version);
+        }
         return version;
     }
     if (versionFilePath) {
@@ -52910,6 +52932,12 @@ function resolveVersionInput() {
             throw new Error(`The specified go version file at: ${versionFilePath} does not exist`);
         }
         version = installer.parseGoVersionFile(versionFilePath);
+        if (version.startsWith('go')) {
+            if (!installer.isGoNativeVersion(version)) {
+                throw new Error(`Invalid Go version "${version}" in ${versionFilePath}. Go-native versions must look like go1.21, go1.21.5, go1.21beta1, or go1.21rc2.`);
+            }
+            version = installer.makeSemver(version);
+        }
     }
     return version;
 }

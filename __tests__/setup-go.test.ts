@@ -689,6 +689,67 @@ describe('setup-go', () => {
     expect(im.makeSemver('1.13.1')).toBe('1.13.1');
   });
 
+  it('isGoNativeVersion accepts upstream Go tag grammar and rejects everything else', () => {
+    expect(im.isGoNativeVersion('go1.21')).toBe(true);
+    expect(im.isGoNativeVersion('go1.21.5')).toBe(true);
+    expect(im.isGoNativeVersion('go1.21beta1')).toBe(true);
+    expect(im.isGoNativeVersion('go1.21rc2')).toBe(true);
+
+    expect(im.isGoNativeVersion('go1.21.x')).toBe(false);
+    expect(im.isGoNativeVersion('go^1.21')).toBe(false);
+    expect(im.isGoNativeVersion('1.21')).toBe(false);
+    expect(im.isGoNativeVersion('go1')).toBe(false);
+  });
+
+  it('accepts a Go-native go-version input and normalizes it', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+    inputs['go-version'] = 'go1.21';
+    findSpy.mockImplementation(() => path.normalize('/cache/go/1.21.0/x64'));
+
+    await main.run();
+
+    expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0');
+  });
+
+  it('rejects a malformed Go-native go-version input', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+    inputs['go-version'] = 'go1.21.x';
+
+    await main.run();
+
+    expect(cnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid Go version "go1.21.x"')
+    );
+  });
+
+  it('accepts a Go-native go-version input with beta suffix and normalizes it', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+    inputs['go-version'] = 'go1.21beta1';
+    findSpy.mockImplementation(() =>
+      path.normalize('/cache/go/1.21.0-beta.1/x64')
+    );
+
+    await main.run();
+
+    expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0-beta.1');
+  });
+
+  it('accepts a Go-native go-version input with rc suffix and normalizes it', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+    inputs['go-version'] = 'go1.21rc2';
+    findSpy.mockImplementation(() =>
+      path.normalize('/cache/go/1.21.0-rc.2/x64')
+    );
+
+    await main.run();
+
+    expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0-rc.2');
+  });
+
   describe('check-latest flag', () => {
     it("use local version and don't check manifest if check-latest is not specified", async () => {
       os.platform = 'linux';
