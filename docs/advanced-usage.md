@@ -53,6 +53,8 @@ steps:
 To try a **pre-release**:
 Download and use beta or RC Go versions as needed.
 
+Native Go version strings are also supported: `go1.21.5`, `go1.21beta1`, and `go1.21rc2` normalize to `1.21.5`, `1.21.0-beta.1`, and `1.21.0-rc.2`, respectively. `go1.21` selects exactly `1.21.0`; use `1.21` for matching patch releases. For ranges and wildcards, use SemVer syntax such as `~1.21` or `1.21.x`, not `go1.21.x`.
+
 ```yaml
 # RC version
 steps:
