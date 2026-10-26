@@ -897,6 +897,10 @@ describe('setup-go', () => {
     await main.run();
 
     expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0');
+    expect(findSpy).toHaveBeenCalledWith('go', '1.21.0', 'x64');
+    expect(logSpy).toHaveBeenCalledWith(
+      'Successfully set up Go version 1.21.0'
+    );
   });
 
   it('rejects a malformed Go-native go-version input', async () => {
@@ -922,6 +926,10 @@ describe('setup-go', () => {
     await main.run();
 
     expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.18.0-beta.2');
+    expect(findSpy).toHaveBeenCalledWith('go', '1.18.0-beta.2', 'x64');
+    expect(logSpy).toHaveBeenCalledWith(
+      'Successfully set up Go version 1.18.0-beta.2'
+    );
   });
 
   it('accepts a Go-native go-version input with rc suffix and normalizes it', async () => {
@@ -935,6 +943,31 @@ describe('setup-go', () => {
     await main.run();
 
     expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0-rc.2');
+    expect(findSpy).toHaveBeenCalledWith('go', '1.21.0-rc.2', 'x64');
+    expect(logSpy).toHaveBeenCalledWith(
+      'Successfully set up Go version 1.21.0-rc.2'
+    );
+  });
+
+  it('downloads a normalized Go-native version on cache miss', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+    inputs['go-version'] = 'go1.13';
+
+    findSpy.mockImplementation(() => '');
+    dlSpy.mockImplementation(async () => '/some/temp/path');
+    extractTarSpy.mockImplementation(async () => '/some/other/temp/path');
+    cacheSpy.mockImplementation(async () =>
+      path.normalize('/cache/go/1.13.0/x64')
+    );
+
+    await main.run();
+
+    expect(logSpy).toHaveBeenCalledWith('Attempting to download 1.13.0...');
+    expect(dlSpy).toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith(
+      'Successfully set up Go version 1.13.0'
+    );
   });
 
   it('keeps go-prefixed version unchanged when a custom download URL is set', async () => {
