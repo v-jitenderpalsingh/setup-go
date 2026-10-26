@@ -461,8 +461,6 @@ The `go-download-base-url` input lets you download Go from a mirror or alternati
 
 When a custom base URL is provided, the action skips the `actions/go-versions` manifest lookup and downloads directly from the specified URL.
 
-> **Note:** With a custom download base URL, the `go-version` input is passed through without native Go version validation or normalization.
-
 **Using the [Microsoft build of Go](https://github.com/microsoft/go):**
 
 ```yaml
