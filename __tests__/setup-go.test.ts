@@ -937,6 +937,25 @@ describe('setup-go', () => {
     expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0-rc.2');
   });
 
+  it('keeps go-prefixed version unchanged when a custom download URL is set', async () => {
+    os.platform = 'linux';
+    os.arch = 'x64';
+
+    const customBaseUrl = 'https://example.com/golang';
+    inputs['go-version'] = 'go1.25.1';
+    inputs['go-download-base-url'] = customBaseUrl;
+
+    const toolName = im.customToolCacheName(customBaseUrl);
+    findSpy.mockImplementation(() =>
+      path.normalize(`/cache/${toolName}/1.25.1/x64`)
+    );
+
+    await main.run();
+
+    expect(logSpy).toHaveBeenCalledWith('Setup go version spec go1.25.1');
+    expect(findSpy).toHaveBeenCalledWith(toolName, 'go1.25.1', 'x64');
+  });
+
   describe('check-latest flag', () => {
     it("use local version and don't check manifest if check-latest is not specified", async () => {
       os.platform = 'linux';

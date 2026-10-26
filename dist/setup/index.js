@@ -97839,7 +97839,10 @@ function resolveVersionInput() {
         warning('Both go-version and go-version-file inputs are specified, only go-version will be used');
     }
     if (version) {
-        if (version.startsWith('go')) {
+        // With a custom download URL leave the version unchanged.
+        const customBaseUrl = getInput('go-download-base-url') ||
+            process.env['GO_DOWNLOAD_BASE_URL'];
+        if (version.startsWith('go') && !customBaseUrl) {
             if (!isGoNativeVersion(version)) {
                 throw new Error(`Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.21beta1, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`);
             }
