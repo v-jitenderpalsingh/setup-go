@@ -222,7 +222,7 @@ function resolveVersionInput(): string {
     if (version.startsWith('go') && !customBaseUrl) {
       if (!installer.isGoNativeVersion(version)) {
         throw new Error(
-          `Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.21beta1, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`
+          `Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.18beta2, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`
         );
       }
       version = installer.makeSemver(version);

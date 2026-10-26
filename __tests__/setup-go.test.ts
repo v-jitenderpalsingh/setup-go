@@ -877,7 +877,7 @@ describe('setup-go', () => {
   it('isGoNativeVersion accepts supported Go-native version formats', () => {
     expect(im.isGoNativeVersion('go1.21')).toBe(true);
     expect(im.isGoNativeVersion('go1.21.5')).toBe(true);
-    expect(im.isGoNativeVersion('go1.21beta1')).toBe(true);
+    expect(im.isGoNativeVersion('go1.18beta2')).toBe(true);
     expect(im.isGoNativeVersion('go1.21rc2')).toBe(true);
 
     expect(im.isGoNativeVersion('go1.21.x')).toBe(false);
@@ -914,14 +914,14 @@ describe('setup-go', () => {
   it('accepts a Go-native go-version input with beta suffix and normalizes it', async () => {
     os.platform = 'linux';
     os.arch = 'x64';
-    inputs['go-version'] = 'go1.21beta1';
+    inputs['go-version'] = 'go1.18beta2';
     findSpy.mockImplementation(() =>
-      path.normalize('/cache/go/1.21.0-beta.1/x64')
+      path.normalize('/cache/go/1.18.0-beta.2/x64')
     );
 
     await main.run();
 
-    expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.21.0-beta.1');
+    expect(logSpy).toHaveBeenCalledWith('Setup go version spec 1.18.0-beta.2');
   });
 
   it('accepts a Go-native go-version input with rc suffix and normalizes it', async () => {
