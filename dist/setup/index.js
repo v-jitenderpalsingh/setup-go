@@ -42336,7 +42336,7 @@ async function findMatch(versionSpec, arch = external_os_default().arch(), dlUrl
     return result;
 }
 function isGoNativeVersion(version) {
-    const expression = /^go[1-9]\d*(\.(0|[1-9]\d*)){1,2}(beta[1-9]\d*|rc[1-9]\d*)?$/;
+    const expression = /^go[1-9]\d*\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*)|(?:beta|rc)[1-9]\d*)?$/;
     return expression.test(version);
 }
 //

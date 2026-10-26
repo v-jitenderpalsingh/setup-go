@@ -874,7 +874,7 @@ describe('setup-go', () => {
     expect(im.makeSemver('1.13.1')).toBe('1.13.1');
   });
 
-  it('isGoNativeVersion accepts upstream Go tag grammar and rejects everything else', () => {
+  it('isGoNativeVersion accepts supported Go-native version formats', () => {
     expect(im.isGoNativeVersion('go1.21')).toBe(true);
     expect(im.isGoNativeVersion('go1.21.5')).toBe(true);
     expect(im.isGoNativeVersion('go1.21beta1')).toBe(true);
@@ -884,6 +884,8 @@ describe('setup-go', () => {
     expect(im.isGoNativeVersion('go^1.21')).toBe(false);
     expect(im.isGoNativeVersion('1.21')).toBe(false);
     expect(im.isGoNativeVersion('go1')).toBe(false);
+    expect(im.isGoNativeVersion('go1.21.5beta1')).toBe(false);
+    expect(im.isGoNativeVersion('go1.21.0rc1')).toBe(false);
   });
 
   it('accepts a Go-native go-version input and normalizes it', async () => {

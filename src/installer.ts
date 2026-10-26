@@ -612,7 +612,7 @@ export async function findMatch(
 
 export function isGoNativeVersion(version: string): boolean {
   const expression =
-    /^go[1-9]\d*(\.(0|[1-9]\d*)){1,2}(beta[1-9]\d*|rc[1-9]\d*)?$/;
+    /^go[1-9]\d*\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*)|(?:beta|rc)[1-9]\d*)?$/;
   return expression.test(version);
 }
 
