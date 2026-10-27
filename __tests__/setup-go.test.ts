@@ -866,6 +866,11 @@ describe('setup-go', () => {
     expect(im.makeSemver('1.10rc1')).toBe('1.10.0-rc.1');
   });
 
+  it('preserves already-normalized prerelease versions', () => {
+    expect(im.makeSemver('1.18.0-beta.2')).toBe('1.18.0-beta.2');
+    expect(im.makeSemver('1.21.0-rc.2')).toBe('1.21.0-rc.2');
+  });
+
   it('converts dot zero versions', async () => {
     expect(im.makeSemver('1.13')).toBe('1.13.0');
   });

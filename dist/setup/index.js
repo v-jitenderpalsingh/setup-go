@@ -42047,10 +42047,10 @@ async function getGo(versionSpec, checkLatest, auth, arch = external_os_default(
         catch (err) {
             const downloadUrl = info?.downloadUrl || customBaseUrl;
             if (err instanceof HTTPError && err.httpStatusCode === 404) {
-                throw new Error(`The requested Go version ${versionSpec} is not available for platform ${osPlat}/${arch}. ` +
+                throw new Error(`The requested Go version ${originalVersionSpec} is not available for platform ${osPlat}/${arch}. ` +
                     `Download URL returned HTTP 404: ${downloadUrl}`, { cause: err });
             }
-            throw new Error(`Failed to download Go ${versionSpec} for platform ${osPlat}/${arch} ` +
+            throw new Error(`Failed to download Go ${originalVersionSpec} for platform ${osPlat}/${arch} ` +
                 `from ${downloadUrl}: ${err}`, { cause: err });
         }
     }
@@ -42350,6 +42350,10 @@ function isGoNativeVersion(version) {
 // 1.10beta1 => 1.10.0-beta.1, 1.10rc1 => 1.10.0-rc.1
 // 1.8.5beta1 => 1.8.5-beta.1, 1.8.5rc1 => 1.8.5-rc.1
 function makeSemver(version) {
+    const validVersion = node_modules_semver.valid(version);
+    if (validVersion) {
+        return validVersion;
+    }
     version = version.replace('go', '');
     version = version.replace('beta', '-beta.').replace('rc', '-rc.');
     const parts = version.split('-');
@@ -97848,7 +97852,7 @@ function resolveVersionInput() {
         if (version.startsWith('go') &&
             !customBaseUrl &&
             !isGoNativeVersion(version)) {
-            throw new Error(`Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.18beta2, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`);
+            throw new Error(`Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.18beta2, or go1.21rc2. For version ranges, use SemVer syntax (e.g. ~1.21, ^1.21).`);
         }
         return version;
     }
