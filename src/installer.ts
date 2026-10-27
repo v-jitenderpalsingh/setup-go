@@ -60,6 +60,11 @@ export async function getGo(
   const osPlat: string = os.platform();
   const customBaseUrl = goDownloadBaseUrl?.replace(/\/+$/, '');
 
+  const originalVersionSpec = versionSpec;
+  if (isGoNativeVersion(versionSpec)) {
+    versionSpec = makeSemver(versionSpec);
+  }
+
   if (
     versionSpec === StableReleaseAlias.Stable ||
     versionSpec === StableReleaseAlias.OldStable
@@ -146,7 +151,11 @@ export async function getGo(
       core.info(
         'Skipping version listing for known direct-download URL. Constructing download URL directly.'
       );
-      info = getInfoFromDirectDownload(versionSpec, arch, customBaseUrl);
+      info = getInfoFromDirectDownload(
+        originalVersionSpec,
+        arch,
+        customBaseUrl
+      );
     } else {
       try {
         info = await getInfoFromDist(versionSpec, arch, customBaseUrl);
@@ -156,7 +165,11 @@ export async function getGo(
         );
       }
       if (!info) {
-        info = getInfoFromDirectDownload(versionSpec, arch, customBaseUrl);
+        info = getInfoFromDirectDownload(
+          originalVersionSpec,
+          arch,
+          customBaseUrl
+        );
       }
     }
 

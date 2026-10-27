@@ -41969,6 +41969,10 @@ async function getGo(versionSpec, checkLatest, auth, arch = external_os_default(
     let manifest;
     const osPlat = external_os_default().platform();
     const customBaseUrl = goDownloadBaseUrl?.replace(/\/+$/, '');
+    const originalVersionSpec = versionSpec;
+    if (isGoNativeVersion(versionSpec)) {
+        versionSpec = makeSemver(versionSpec);
+    }
     if (versionSpec === StableReleaseAlias.Stable ||
         versionSpec === StableReleaseAlias.OldStable) {
         if (customBaseUrl) {
@@ -42023,7 +42027,7 @@ async function getGo(versionSpec, checkLatest, auth, arch = external_os_default(
         const skipVersionListing = NO_VERSION_LISTING_BASE_URLS.some(url => customBaseUrl.toLowerCase() === url.toLowerCase());
         if (skipVersionListing) {
             core_info('Skipping version listing for known direct-download URL. Constructing download URL directly.');
-            info = getInfoFromDirectDownload(versionSpec, arch, customBaseUrl);
+            info = getInfoFromDirectDownload(originalVersionSpec, arch, customBaseUrl);
         }
         else {
             try {
@@ -42033,7 +42037,7 @@ async function getGo(versionSpec, checkLatest, auth, arch = external_os_default(
                 core_info('Version listing not available from custom URL. Constructing download URL directly.');
             }
             if (!info) {
-                info = getInfoFromDirectDownload(versionSpec, arch, customBaseUrl);
+                info = getInfoFromDirectDownload(originalVersionSpec, arch, customBaseUrl);
             }
         }
         try {
@@ -97839,14 +97843,12 @@ function resolveVersionInput() {
         warning('Both go-version and go-version-file inputs are specified, only go-version will be used');
     }
     if (version) {
-        // With a custom download URL leave the version unchanged.
         const customBaseUrl = getInput('go-download-base-url') ||
             process.env['GO_DOWNLOAD_BASE_URL'];
-        if (version.startsWith('go') && !customBaseUrl) {
-            if (!isGoNativeVersion(version)) {
-                throw new Error(`Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.18beta2, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`);
-            }
-            version = makeSemver(version);
+        if (version.startsWith('go') &&
+            !customBaseUrl &&
+            !isGoNativeVersion(version)) {
+            throw new Error(`Invalid Go version "${version}". Go-native versions must look like go1.21, go1.21.5, go1.18beta2, or go1.21rc2. For version ranges, use semver syntax (e.g. ~1.21, ^1.21).`);
         }
         return version;
     }
