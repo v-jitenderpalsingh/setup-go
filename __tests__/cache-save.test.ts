@@ -54,8 +54,12 @@ describe('cache-save', () => {
     typeof cacheUtils.getCacheDirectoryPath
   >;
   let existsSpy: jest.Mock<typeof fs.existsSync>;
+  let originalRestoredCaches: string | undefined;
 
   beforeEach(() => {
+    originalRestoredCaches = process.env.SETUP_GO_RESTORED_CACHES;
+    delete process.env.SETUP_GO_RESTORED_CACHES;
+
     primaryKeyValue = primaryKey;
     matchedKeyValue = 'matched-key';
 
@@ -102,6 +106,11 @@ describe('cache-save', () => {
   });
 
   afterEach(() => {
+    if (originalRestoredCaches === undefined) {
+      delete process.env.SETUP_GO_RESTORED_CACHES;
+    } else {
+      process.env.SETUP_GO_RESTORED_CACHES = originalRestoredCaches;
+    }
     jest.clearAllMocks();
   });
 
@@ -149,6 +158,30 @@ describe('cache-save', () => {
     );
     expect(saveCacheSpy).not.toHaveBeenCalled();
     expect(setFailedSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not save after another invocation restored the same key and paths', async () => {
+    matchedKeyValue = '';
+    process.env.SETUP_GO_RESTORED_CACHES = JSON.stringify([
+      cacheUtils.getRestoreIdentity(primaryKey, ['cache_directory_path'])
+    ]);
+
+    await run();
+
+    expect(saveCacheSpy).not.toHaveBeenCalled();
+    expect(infoSpy).toHaveBeenCalledWith(
+      `Cache key ${primaryKey} was restored in another invocation for these paths; skipping save.`
+    );
+  });
+
+  it('still saves after a partial cache hit to populate the primary key', async () => {
+    process.env.SETUP_GO_RESTORED_CACHES = JSON.stringify([
+      cacheUtils.getRestoreIdentity(primaryKey, ['cache_directory_path'])
+    ]);
+
+    await run();
+
+    expect(saveCacheSpy).toHaveBeenCalled();
   });
 
   it('saves cache when the primary key differs from the matched key', async () => {

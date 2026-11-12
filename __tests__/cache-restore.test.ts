@@ -64,12 +64,20 @@ describe('restoreCache', () => {
   const versionSpec = '1.13.1';
   const packageManager = 'default';
   const cacheDependencyPath = 'path';
+  const expectedPrimaryKey = () => {
+    const linuxVersion =
+      process.env.RUNNER_OS === 'Linux' ? `${process.env.ImageOS}-` : '';
+    return `setup-go-${process.env.RUNNER_OS}-${process.arch}-${linuxVersion}go-${versionSpec}-file_hash`;
+  };
 
   let originalWorkspace: string | undefined;
+  let originalRestoredCaches: string | undefined;
 
   beforeEach(() => {
     originalWorkspace = process.env.GITHUB_WORKSPACE;
+    originalRestoredCaches = process.env.SETUP_GO_RESTORED_CACHES;
     process.env.GITHUB_WORKSPACE = '/test/workspace';
+    delete process.env.SETUP_GO_RESTORED_CACHES;
     //Arrange
     hashFilesSpy = glob.hashFiles as jest.Mock<typeof glob.hashFiles>;
     getCacheDirectoryPathSpy = cacheUtils.getCacheDirectoryPath as jest.Mock<
@@ -93,6 +101,11 @@ describe('restoreCache', () => {
 
   afterEach(() => {
     process.env.GITHUB_WORKSPACE = originalWorkspace;
+    if (originalRestoredCaches === undefined) {
+      delete process.env.SETUP_GO_RESTORED_CACHES;
+    } else {
+      process.env.SETUP_GO_RESTORED_CACHES = originalRestoredCaches;
+    }
     jest.restoreAllMocks();
   });
 
@@ -135,6 +148,66 @@ describe('restoreCache', () => {
       cacheDependencyPath
     );
     expect(setOutputSpy).toHaveBeenCalledWith('cache-hit', true);
+    expect(core.exportVariable).toHaveBeenCalledWith(
+      'SETUP_GO_RESTORED_CACHES',
+      JSON.stringify([
+        cacheUtils.getRestoreIdentity(expectedPrimaryKey(), [
+          'cache_directory_path',
+          'cache_directory_path'
+        ])
+      ])
+    );
+  });
+
+  it('should skip restoring a cache identity recorded from an earlier hit', async () => {
+    hashFilesSpy.mockImplementation(() => Promise.resolve('file_hash'));
+    process.env.SETUP_GO_RESTORED_CACHES = JSON.stringify([
+      cacheUtils.getRestoreIdentity(expectedPrimaryKey(), [
+        'cache_directory_path',
+        'cache_directory_path'
+      ])
+    ]);
+
+    await cacheRestore.restoreCache(
+      versionSpec,
+      packageManager,
+      cacheDependencyPath
+    );
+
+    expect(restoreCacheSpy).not.toHaveBeenCalled();
+    expect(setOutputSpy).toHaveBeenCalledWith('cache-hit', true);
+    expect(core.saveState).toHaveBeenCalledWith(
+      'CACHE_RESULT',
+      expectedPrimaryKey()
+    );
+  });
+
+  it('does not record a cache identity after a miss', async () => {
+    hashFilesSpy.mockImplementation(() => Promise.resolve('file_hash'));
+    restoreCacheSpy.mockImplementation(() => Promise.resolve(''));
+
+    await cacheRestore.restoreCache(
+      versionSpec,
+      packageManager,
+      cacheDependencyPath
+    );
+
+    expect(core.exportVariable).not.toHaveBeenCalled();
+  });
+
+  it('does not record a cache identity when restore throws', async () => {
+    hashFilesSpy.mockImplementation(() => Promise.resolve('file_hash'));
+    restoreCacheSpy.mockRejectedValue(new Error('restore failed'));
+
+    await expect(
+      cacheRestore.restoreCache(
+        versionSpec,
+        packageManager,
+        cacheDependencyPath
+      )
+    ).rejects.toThrow('restore failed');
+
+    expect(core.exportVariable).not.toHaveBeenCalled();
   });
 
   it('should throw if dependency file is not found in workspace', async () => {
