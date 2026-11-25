@@ -97962,6 +97962,26 @@ const supportedPackageManagers = {
 
 
 
+
+const RESTORED_CACHES_ENV = 'SETUP_GO_RESTORED_CACHES';
+const getRestoredCaches = () => {
+    const serialized = process.env[RESTORED_CACHES_ENV];
+    if (!serialized) {
+        return new Set();
+    }
+    const entries = JSON.parse(serialized);
+    if (!Array.isArray(entries) ||
+        !entries.every((entry) => typeof entry === 'string')) {
+        throw new Error(`Invalid ${RESTORED_CACHES_ENV}: expected a string array.`);
+    }
+    return new Set(entries);
+};
+const getRestoreIdentity = (key, cachePaths) => {
+    const normalizedPaths = [
+        ...new Set(cachePaths.map(cachePath => external_path_default().resolve(cachePath)))
+    ].sort();
+    return JSON.stringify([key, normalizedPaths]);
+};
 const getCommandOutput = async (toolCommand) => {
     let { stdout, stderr, exitCode } = await getExecOutput(toolCommand, undefined, { ignoreReturnCode: true });
     if (exitCode) {
@@ -98040,6 +98060,13 @@ const cache_restore_restoreCache = async (versionSpec, packageManager, cacheDepe
     const primaryKey = `setup-go-${platform}-${arch}-${linuxVersion}go-${versionSpec}-${fileHash}`;
     core_debug(`primary key is ${primaryKey}`);
     saveState(State.CachePrimaryKey, primaryKey);
+    const restoredCaches = getRestoredCaches();
+    if (restoredCaches.has(getRestoreIdentity(primaryKey, cachePaths))) {
+        core_info(`Cache key ${primaryKey} was restored previously for these paths; skipping restore and leaving existing contents unchanged.`);
+        setOutput(Outputs.CacheHit, true);
+        saveState(State.CacheMatchedKey, primaryKey);
+        return;
+    }
     const cacheKey = await restoreCache(cachePaths, primaryKey);
     setOutput(Outputs.CacheHit, Boolean(cacheKey));
     if (!cacheKey) {
@@ -98049,6 +98076,8 @@ const cache_restore_restoreCache = async (versionSpec, packageManager, cacheDepe
     }
     saveState(State.CacheMatchedKey, cacheKey);
     core_info(`Cache restored from key: ${cacheKey}`);
+    restoredCaches.add(getRestoreIdentity(primaryKey, cachePaths));
+    exportVariable(RESTORED_CACHES_ENV, JSON.stringify([...restoredCaches]));
 };
 const findDependencyFile = (packageManager) => {
     const dependencyFile = packageManager.dependencyFilePattern;

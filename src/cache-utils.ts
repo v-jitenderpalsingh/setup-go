@@ -1,10 +1,41 @@
 import * as cache from '@actions/cache';
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
+import path from 'path';
 import {
   supportedPackageManagers,
   PackageManagerInfo
 } from './package-managers.js';
+
+export const RESTORED_CACHES_ENV = 'SETUP_GO_RESTORED_CACHES';
+
+export const getRestoredCaches = (): Set<string> => {
+  const serialized = process.env[RESTORED_CACHES_ENV];
+  if (!serialized) {
+    return new Set<string>();
+  }
+
+  const entries: unknown = JSON.parse(serialized);
+  if (
+    !Array.isArray(entries) ||
+    !entries.every((entry): entry is string => typeof entry === 'string')
+  ) {
+    throw new Error(`Invalid ${RESTORED_CACHES_ENV}: expected a string array.`);
+  }
+
+  return new Set<string>(entries);
+};
+
+export const getRestoreIdentity = (
+  key: string,
+  cachePaths: string[]
+): string => {
+  const normalizedPaths = [
+    ...new Set(cachePaths.map(cachePath => path.resolve(cachePath)))
+  ].sort();
+
+  return JSON.stringify([key, normalizedPaths]);
+};
 
 export const getCommandOutput = async (toolCommand: string) => {
   let {stdout, stderr, exitCode} = await exec.getExecOutput(

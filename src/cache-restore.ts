@@ -6,7 +6,13 @@ import fs from 'fs';
 
 import {State, Outputs} from './constants.js';
 import {PackageManagerInfo} from './package-managers.js';
-import {getCacheDirectoryPath, getPackageManagerInfo} from './cache-utils.js';
+import {
+  getCacheDirectoryPath,
+  getPackageManagerInfo,
+  getRestoredCaches,
+  getRestoreIdentity,
+  RESTORED_CACHES_ENV
+} from './cache-utils.js';
 
 export const restoreCache = async (
   versionSpec: string,
@@ -37,6 +43,16 @@ export const restoreCache = async (
 
   core.saveState(State.CachePrimaryKey, primaryKey);
 
+  const restoredCaches = getRestoredCaches();
+  if (restoredCaches.has(getRestoreIdentity(primaryKey, cachePaths))) {
+    core.info(
+      `Cache key ${primaryKey} was restored previously for these paths; skipping restore and leaving existing contents unchanged.`
+    );
+    core.setOutput(Outputs.CacheHit, true);
+    core.saveState(State.CacheMatchedKey, primaryKey);
+    return;
+  }
+
   const cacheKey = await cache.restoreCache(cachePaths, primaryKey);
   core.setOutput(Outputs.CacheHit, Boolean(cacheKey));
 
@@ -48,6 +64,9 @@ export const restoreCache = async (
 
   core.saveState(State.CacheMatchedKey, cacheKey);
   core.info(`Cache restored from key: ${cacheKey}`);
+
+  restoredCaches.add(getRestoreIdentity(primaryKey, cachePaths));
+  core.exportVariable(RESTORED_CACHES_ENV, JSON.stringify([...restoredCaches]));
 };
 
 const findDependencyFile = (packageManager: PackageManagerInfo) => {
